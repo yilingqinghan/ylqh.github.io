@@ -6,7 +6,7 @@
   <link href="http://lordaeronesz.github.io/atom.xml" rel="self"/>
   
   <link href="http://lordaeronesz.github.io/"/>
-  <updated>2023-03-12T13:15:44.120Z</updated>
+  <updated>2023-04-04T08:30:37.231Z</updated>
   <id>http://lordaeronesz.github.io/</id>
   
   <author>
@@ -15,6 +15,27 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>有关C++字符串拷贝的一个小问题</title>
+    <link href="http://lordaeronesz.github.io/2023/04/04/%E6%9C%89%E5%85%B3C++%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%8B%B7%E8%B4%9D%E7%9A%84%E4%B8%80%E4%B8%AA%E5%B0%8F%E9%97%AE%E9%A2%98/"/>
+    <id>http://lordaeronesz.github.io/2023/04/04/%E6%9C%89%E5%85%B3C++%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%8B%B7%E8%B4%9D%E7%9A%84%E4%B8%80%E4%B8%AA%E5%B0%8F%E9%97%AE%E9%A2%98/</id>
+    <published>2023-04-04T07:21:23.000Z</published>
+    <updated>2023-04-04T08:30:37.231Z</updated>
+    
+    <content type="html"><![CDATA[<p>最近面试被问到了一个 C++ 中的小问题，就是如果有字符串 s1 和 s2，将 s1 赋值给 s2 后，它们的内存分布是什么样的。当时感觉可能是共享的，但也不太确定，回来后查阅资料发现结果并不是那么简单。</p><span id="more"></span><h1 id="查阅资料"><a href="#查阅资料" class="headerlink" title="查阅资料"></a>查阅资料</h1><p>首先是询问 chatGPT 得到的答案，如下：</p><blockquote><p>如果两个 <code>string</code> 对象存储相同的字符串，它们可能会共享同一个内存块，也可能会分别分配自己的内存块。当一个 <code>string</code> 对象被创建时，它会分配一个新的内存块，并将字符串复制到该内存块中。当第二个 <code>string</code> 对象被创建时，它可能会使用与第一个 <code>string</code> 对象相同的内存块，也可能会分配一个新的内存块并将字符串复制到该内存块中。</p></blockquote><h1 id="代码测试"><a href="#代码测试" class="headerlink" title="代码测试"></a>代码测试</h1><p>看来又是一个没有标准解决方案的问题，于是我编写了一个简单的程序用来在不同的环境下测试。</p><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span><span class="token operator">*</span> <span class="token keyword">operator</span> <span class="token keyword">new</span><span class="token punctuation">(</span>size_t count<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Allocate "</span> <span class="token operator">&lt;&lt;</span> count <span class="token operator">&lt;&lt;</span> <span class="token string">" Bytes"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span><span class="token keyword">return</span> <span class="token function">malloc</span><span class="token punctuation">(</span>count<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>string s1 <span class="token operator">=</span> <span class="token string">"Hello World"</span><span class="token punctuation">;</span>string s2 <span class="token operator">=</span> s1<span class="token punctuation">;</span>cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>s1<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>s2<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>s2<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">'h'</span><span class="token punctuation">;</span>cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>s1<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>s2<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span><span class="token punctuation">&#125;</span></code></pre><p>在上面的程序中，我重载了  <code>operator new</code> 函数来追踪内存的分配，然后先初始化字符串 s1，然后再将 s1 作为 s2 的初始值进行赋值，输出 s1 和 s2 字符串的地址是否是同一块，即内存是否共享，然后我再修改 s2 的首字母（之所以这么做是因为修改 s2 后，由于 s1 与 s2 要保持独立性，因此如果之前内存是共用的，那么在修改之前必定需要为 s2 重新分配内存，否则改变 s2 后 s1 也将改变），再输出查看 s1 和 s2 字符串的地址是否相同。</p><p>以下是在不同编译器下程序运行的结果：</p><h2 id="g"><a href="#g" class="headerlink" title="g++"></a>g++</h2><p><img src="/2023/04/04/%E6%9C%89%E5%85%B3C++%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%8B%B7%E8%B4%9D%E7%9A%84%E4%B8%80%E4%B8%AA%E5%B0%8F%E9%97%AE%E9%A2%98/gpp.png"></p><h2 id="MSVC"><a href="#MSVC" class="headerlink" title="MSVC"></a>MSVC</h2><p><img src="/2023/04/04/%E6%9C%89%E5%85%B3C++%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%8B%B7%E8%B4%9D%E7%9A%84%E4%B8%80%E4%B8%AA%E5%B0%8F%E9%97%AE%E9%A2%98/msvc.png"></p><p>在 g++ 下未对字符串进行更改时，s1 和 s2 共用一块内存空间，而在修改前才为 s2 分配内存空间。而在 MSVC 下 s1 和 s2 始终没有共用内存空间。可见不同编译器对此情况的处理不尽相同。</p><p>在 g++ 中，对字符串拷贝使用了 COW（Copy-On-Write）技术，即当一个 string 对象被复制时，不会立即复制内存块，而是共享同一个内存块，直到其中一个 string 对象要修改字符串内容时，才会复制内存块并分离出一个新的内存块。这样可以避免频繁的内存分配和复制，提高程序的性能。因此，如果两个 string 对象存储相同的字符串，它们可能会共享同一个内存块。</p><p>而在 MSVC 中，则不采用 COW 技术，而是每个 string 对象都分配自己的内存块来存储字符串。因此，如果两个 string 对象存储相同的字符串，它们会分别分配自己的内存块。</p><h1 id="COW-的缺点"><a href="#COW-的缺点" class="headerlink" title="COW 的缺点"></a>COW 的缺点</h1><p>MSVC 之所以不采用 COW 技术，可能是因为 COW 技术会带来一些额外的开销和复杂度。</p><p>首先，COW 技术需要额外的代码来实现内存共享和复制，这会带来一定的性能开销和内存占用。在某些情况下，这种开销可能会超过使用动态内存分配的开销。</p><p>其次，COW 技术会增加代码的复杂度和难度。由于需要处理内存共享和复制，代码的实现会变得更加复杂和难以维护。此外，COW 技术还可能会带来一些潜在的风险，如线程安全性问题等。</p><p>因此，不同的编译器实现可能会根据具体情况来选择是否采用 COW 技术。在一些情况下，COW 技术可以提高性能和效率，但在另一些情况下，它可能会带来额外的开销和复杂度。</p>]]></content>
+    
+    
+    <summary type="html">&lt;p&gt;最近面试被问到了一个 C++ 中的小问题，就是如果有字符串 s1 和 s2，将 s1 赋值给 s2 后，它们的内存分布是什么样的。当时感觉可能是共享的，但也不太确定，回来后查阅资料发现结果并不是那么简单。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="C++" scheme="http://lordaeronesz.github.io/categories/C/"/>
+    
+    
+    <category term="C++" scheme="http://lordaeronesz.github.io/tags/C/"/>
+    
+  </entry>
   
   <entry>
     <title>计算机基础面试题总结</title>
@@ -473,29 +494,6 @@
     
     
     <summary type="html">&lt;p&gt;本文将介绍一些常见的 C++ 代码优化技巧，本文为该系列的第一章，未来不定期更新。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="C++" scheme="http://lordaeronesz.github.io/categories/C/"/>
-    
-    
-    <category term="C++" scheme="http://lordaeronesz.github.io/tags/C/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>C++复合类型的声明</title>
-    <link href="http://lordaeronesz.github.io/2022/03/03/C++%E5%A4%8D%E5%90%88%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%A3%B0%E6%98%8E/"/>
-    <id>http://lordaeronesz.github.io/2022/03/03/C++%E5%A4%8D%E5%90%88%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%A3%B0%E6%98%8E/</id>
-    <published>2022-03-03T06:28:52.000Z</published>
-    <updated>2022-03-03T07:06:01.398Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="声明语句的构成"><a href="#声明语句的构成" class="headerlink" title="声明语句的构成"></a>声明语句的构成</h1><blockquote><p>在 C++ 中，一条声明语句由一个<strong>基本数据类型</strong>（base type）和紧随其后的一个<strong>声明符</strong>（declarator）列表组成。</p></blockquote><span id="more"></span><h1 id="复合类型的声明"><a href="#复合类型的声明" class="headerlink" title="复合类型的声明"></a>复合类型的声明</h1><h2 id="定义多个变量"><a href="#定义多个变量" class="headerlink" title="定义多个变量"></a>定义多个变量</h2><p>对于基本数据类型变量的声明，声明符就是变量名。但对于复合类型来讲，例如指针类型和引用类型，变量名却只是声明符的一部分。例如 <code>int *b;</code> 需要注意的是， “*”运算符修饰的对象是变量名，而不是基本类型名。例如 <code>int *a, b; </code>，此处变量 b 的数据类型为 int，而非 int *。</p><h2 id="指针的引用"><a href="#指针的引用" class="headerlink" title="指针的引用"></a>指针的引用</h2><p>指针引用的正确定义形式如下：</p><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">*</span> b <span class="token operator">=</span> <span class="token operator">&amp;</span>a<span class="token punctuation">;</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token operator">&amp;</span> c <span class="token operator">=</span> b<span class="token punctuation">;</span> <span class="token comment">// c为指针b的引用</span><span class="token keyword">int</span><span class="token operator">&amp;</span><span class="token operator">*</span> d <span class="token operator">=</span> b<span class="token punctuation">;</span> <span class="token comment">// 错误，d表示指向引用的指针，而引用本身并不是一个对象，无法使用指针进行指向</span></code></pre><p>要想正确理解一个复杂的复合类型，可以从右向左进行阅读，离变量名最近的符号越接近该变量的真实类型，如上例中的引用符。</p>]]></content>
-    
-    
-    <summary type="html">&lt;h1 id=&quot;声明语句的构成&quot;&gt;&lt;a href=&quot;#声明语句的构成&quot; class=&quot;headerlink&quot; title=&quot;声明语句的构成&quot;&gt;&lt;/a&gt;声明语句的构成&lt;/h1&gt;&lt;blockquote&gt;
-&lt;p&gt;在 C++ 中，一条声明语句由一个&lt;strong&gt;基本数据类型&lt;/strong&gt;（base type）和紧随其后的一个&lt;strong&gt;声明符&lt;/strong&gt;（declarator）列表组成。&lt;/p&gt;
-&lt;/blockquote&gt;</summary>
     
     
     
