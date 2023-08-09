@@ -313,7 +313,11 @@ extra field (variable size)</code></pre>
 
   }
 }
-window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><script>(()=>{
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/contrib/copy-tex.min.js"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/contrib/copy-tex.css"><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script><script>(()=>{
   const $countDom = document.getElementById('twikoo-count')
   const init = () => {
     twikoo.init(Object.assign({
