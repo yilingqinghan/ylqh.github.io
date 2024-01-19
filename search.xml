@@ -4286,12 +4286,12 @@ vector<span class="token operator">&lt;</span><span class="token keyword">int</s
 			curNode<span class="token operator">-></span>next <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">ListNode</span><span class="token punctuation">(</span>fNode<span class="token operator">-></span>val<span class="token punctuation">)</span><span class="token punctuation">;</span>
 			curNode <span class="token operator">=</span> curNode<span class="token operator">-></span>next<span class="token punctuation">;</span>
 		<span class="token punctuation">&#125;</span>
-        <span class="token keyword">if</span> <span class="token punctuation">(</span>fNode<span class="token operator">-></span>left <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-            q<span class="token punctuation">.</span><span class="token function">emplace</span><span class="token punctuation">(</span>fNode<span class="token operator">-></span>left<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token punctuation">&#125;</span>
-        <span class="token keyword">if</span> <span class="token punctuation">(</span>fNode<span class="token operator">-></span>right <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-            q<span class="token punctuation">.</span><span class="token function">emplace</span><span class="token punctuation">(</span>fNode<span class="token operator">-></span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>fNode<span class="token operator">-></span>left <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			q<span class="token punctuation">.</span><span class="token function">emplace</span><span class="token punctuation">(</span>fNode<span class="token operator">-></span>left<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>fNode<span class="token operator">-></span>right <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			q<span class="token punctuation">.</span><span class="token function">emplace</span><span class="token punctuation">(</span>fNode<span class="token operator">-></span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
 	<span class="token punctuation">&#125;</span>
 	<span class="token keyword">return</span> dummy<span class="token operator">-></span>next<span class="token punctuation">;</span>
 <span class="token punctuation">&#125;</span></code></pre>
@@ -7278,6 +7278,73 @@ m <span class="token operator">=</span> <span class="token string">""</span>
       <tags>
         <tag>算法</tag>
         <tag>数据结构</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从机器指令的角度看一些位级操作</title>
+    <url>/2024/01/06/%E4%BB%8E%E6%9C%BA%E5%99%A8%E6%8C%87%E4%BB%A4%E7%9A%84%E8%A7%92%E5%BA%A6%E7%9C%8B%E4%B8%80%E4%BA%9B%E4%BD%8D%E7%BA%A7%E6%93%8D%E4%BD%9C/</url>
+    <content><![CDATA[<p>C/C++ 中有时会遇到一些位级操作，通常是一些隐式的类型转换，它们往往很难凭借高级语言层面的直觉来理解或记忆。本文旨在分析这些操作对应的汇编代码，从机器指令的角度来理解这类操作。</p>
+<span id="more"></span>
+
+<h1 id="补码数转换为更长的无符号数"><a href="#补码数转换为更长的无符号数" class="headerlink" title="补码数转换为更长的无符号数"></a>补码数转换为更长的无符号数</h1><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">short</span> a <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">12345</span><span class="token punctuation">;</span>
+	<span class="token keyword">unsigned</span> b <span class="token operator">=</span> a<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> a <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> b <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token comment">// -12345 4294954951</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>首先看以上这个示例，一个短整型数据（2 字节）强制类型转换为无符号整型数据（4 字节）之后，得到的值却是一个看似毫不相关的结果。</p>
+<pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">showBytes</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">char</span><span class="token operator">*</span> ptr<span class="token punctuation">,</span> size_t sz<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> sz<span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%.2x "</span><span class="token punctuation">,</span> ptr<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>首先，为了更好地分析这类位级操作，这里编写了一个简单的字节打印函数，通过将指向变量的指针强制类型转换为 <code>unsigned char *</code> ，便可以很方便地通过增加数组下标来实现对每个字节的访问。</p>
+<pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">short</span> a <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">12345</span><span class="token punctuation">;</span>
+	<span class="token function">showBytes</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>a<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// c7 cf</span>
+	<span class="token keyword">unsigned</span> b <span class="token operator">=</span> a<span class="token punctuation">;</span>
+	<span class="token function">showBytes</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>b<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// c7 cf ff ff</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>通过打印变量 a 和 b 的位级表示，发现 a 的位级表示为：c7 ff，而 b 的位级表示为 c7 ff ff ff，这表明 b 在位级层面实际上进行了符号扩展（注意此处字节序为<strong>小端表示</strong>，即字节地址由高到低为 ff ff ff c7），再将其解释为无符号类型，用表达式表示就是：<code>unsigned b = (unsigned)(int)a;</code>.</p>
+<p>在 MSVC 编译器下对前面的代码进行编译，得到以下代码：</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">mov eax, 0ffffcfc7h
+mov word ptr [a], ax
+
+movsx eax, word ptr [a]
+mov dword ptr [b], eax</code></pre>
+
+<p>将 a 赋值给 b 的指令为 <code>movsx</code>，该指令的作用是将源数据经过<strong>符号扩展</strong>后存入目的地址，相关的指令还有 <code>movzx</code>，作用是将源数据经过<strong>零扩展</strong>后存入目的地址，因此程序实际上是将 a 的比特位符号扩展后再存入 b 中。事实上，要对一个变量进行何种扩展，决定因素是<strong>源数据的类型</strong>，而与目标类型无关，这是 C 语言标准所规定的。</p>
+<h1 id="截断补码数"><a href="#截断补码数" class="headerlink" title="截断补码数"></a>截断补码数</h1><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">int</span> a <span class="token operator">=</span> INT32_MIN<span class="token punctuation">;</span>
+	<span class="token keyword">short</span> b <span class="token operator">=</span> a<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> a <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> b <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token comment">// -2147483648 0</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>4 字节的整型转换为 2 字节的短整型，同样产生了令人意想不到的结果。</p>
+<pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">int</span> a <span class="token operator">=</span> INT32_MIN<span class="token punctuation">;</span>
+	<span class="token function">showBytes</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>a<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 00 00 00 80</span>
+	<span class="token keyword">short</span> b <span class="token operator">=</span> a<span class="token punctuation">;</span>
+	<span class="token function">showBytes</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>b<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 00 00</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>由于整型的字节长度大于短整型，因此在类型转换过程中，必然要进行数位的截断，关键在于截断策略的选择。对于无符号数来说，很容易想到直接将高位字节部分截断，因为这样才能保证当整型数值 a 不是太大（小于短整型所能表示的最大数值）时，类型转换后数值保持不变。而根据上述字节打印结果，可以看到补码数值的截断策略与无符号数一致，以下汇编代码清楚地表明了这一点：</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">mov dword ptr [a], 80000000h
+
+mov ax, word ptr [a]
+mov word ptr [b], ax</code></pre>
+
+<p>在进行类型转换时，程序只是简单地将变量 a 的一个字（word），即两字节存入 b 中。因此补码数的截断，其本质上还是位级层面的截断，与该补码所表示的数值并无关系，不涉及到任何的算术运算，这就使得在对负数进行截断时，往往产生出乎意料的结果。</p>
+]]></content>
+      <categories>
+        <category>计算机体系结构</category>
+      </categories>
+      <tags>
+        <tag>位运算</tag>
+        <tag>计算机体系结构</tag>
       </tags>
   </entry>
 </search>
