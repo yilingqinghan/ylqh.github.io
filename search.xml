@@ -7069,7 +7069,6 @@ m <span class="token operator">=</span> <span class="token string">""</span>
 <p>故使用百度识图得到图片人物为<strong>吉克隽逸</strong>，最终得到压缩包密码为她的生日 19880513。</p>
 <p>解压后得到一个音频文件，为她演唱的一首歌，在歌的末尾含有一串摩尔斯电码，观察该音频文件的波形图并记录下摩尔斯电码并解密，得到**JNCTFDOY0UTH1NKYOUARERI9HT?**，显然，这是一个虚假的 flag。</p>
 <p>个人认为，坑不是不能有，但得到这样错误结果的代价也是不小的，且正确解法与错误解法之间完全没有任何联系，希望出题人能平衡好这其中的差别。</p>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>我本人未来并不想从事信息安全相关的行业，参加 CTF 竞赛纯粹是因为兴趣，以及想要通过这样的形式学到我平时接触不到的知识。至于比赛结果与否，那都不重要了。</p>
 ]]></content>
       <categories>
         <category>经验</category>
