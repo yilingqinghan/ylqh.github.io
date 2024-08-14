@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://lordaeronesz.github.io/2024/08/13/MIT6.s081-2021-Lab%20Multithreading/</loc>
+    <lastmod>2024-08-14</lastmod>
+  </url>
+  <url>
     <loc>http://lordaeronesz.github.io/2024/08/13/MIT6.s081-2021-Lab%20Copy%20on-write/</loc>
     <lastmod>2024-08-13</lastmod>
   </url>
