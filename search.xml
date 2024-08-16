@@ -9961,4 +9961,356 @@ index 12793e8..e4fd03e 100644
         <tag>xv6</tag>
       </tags>
   </entry>
+  <entry>
+    <title>MIT6.s081 2021 Lab File system</title>
+    <url>/2024/08/16/MIT6.s081-2021-Lab%20File%20system/</url>
+    <content><![CDATA[<h1 id="Large-files"><a href="#Large-files" class="headerlink" title="Large files"></a>Large files</h1><h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>xv6 文件系统的 inode 中地址域 <code>addrs[]</code> 由 12 个直接地址和 1 个一级间接地址组成，本实验要求将地址域更改为 11 个直接地址、1 个一级间接地址和 1 个二级间接地址组成，以支持更大文件的存储。</p>
+<p>代码的实现有了直接地址和一级间接地址做参考，就很简单了，直接查看代码部分即可。</p>
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><pre class="language-diff" data-language="diff"><code class="language-diff">diff --git a/kernel/file.h b/kernel/file.h
+index b076d1d..5c4eb3a 100644
+<span class="token coord">--- a/kernel/file.h</span>
+<span class="token coord">+++ b/kernel/file.h</span>
+@@ -26,7 +26,7 @@ struct inode &#123;
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">  short minor;
+</span><span class="token prefix unchanged"> </span><span class="token line">  short nlink;
+</span><span class="token prefix unchanged"> </span><span class="token line">  uint size;
+</span></span><span class="token deleted-sign deleted"><span class="token prefix deleted">-</span><span class="token line">  uint addrs[NDIRECT+1];
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">  uint addrs[NDIRECT+2];
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">&#125;;
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">// map major device number to device functions.
+</span></span>diff --git a/kernel/fs.c b/kernel/fs.c
+index 40c9bd4..4c00ab5 100644
+<span class="token coord">--- a/kernel/fs.c</span>
+<span class="token coord">+++ b/kernel/fs.c</span>
+@@ -400,6 +400,33 @@ bmap(struct inode *ip, uint bn)
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">    brelse(bp);
+</span><span class="token prefix unchanged"> </span><span class="token line">    return addr;
+</span><span class="token prefix unchanged"> </span><span class="token line">  &#125;
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">  bn -= NINDIRECT;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">  if (bn &lt; NINDIRECT2) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    if ((addr = ip->addrs[NDIRECT + 1]) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">    uint i = bn / NINDIRECT, j = bn % NINDIRECT;
+</span><span class="token prefix inserted">+</span><span class="token line">    
+</span><span class="token prefix inserted">+</span><span class="token line">    bp = bread(ip->dev, addr);
+</span><span class="token prefix inserted">+</span><span class="token line">    a = (uint *)bp->data;
+</span><span class="token prefix inserted">+</span><span class="token line">    if ((addr = a[i]) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      a[i] = addr = balloc(ip->dev);
+</span><span class="token prefix inserted">+</span><span class="token line">      log_write(bp);
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">    brelse(bp);
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">    bp = bread(ip->dev, addr);
+</span><span class="token prefix inserted">+</span><span class="token line">    a = (uint *)bp->data;
+</span><span class="token prefix inserted">+</span><span class="token line">    if ((addr = a[j]) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      a[j] = addr = balloc(ip->dev);
+</span><span class="token prefix inserted">+</span><span class="token line">      log_write(bp);
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">    brelse(bp);
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">    return addr;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">  panic("bmap: out of range");
+</span><span class="token prefix unchanged"> </span><span class="token line">&#125;
+</span></span>@@ -432,6 +459,29 @@ itrunc(struct inode *ip)
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">    ip->addrs[NDIRECT] = 0;
+</span><span class="token prefix unchanged"> </span><span class="token line">  &#125;
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">  struct buf *bp2;
+</span><span class="token prefix inserted">+</span><span class="token line">  uint *a2;
+</span><span class="token prefix inserted">+</span><span class="token line">  if (ip->addrs[NDIRECT + 1]) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    bp = bread(ip->dev, ip->addrs[NDIRECT + 1]);
+</span><span class="token prefix inserted">+</span><span class="token line">    a = (uint *)bp->data;
+</span><span class="token prefix inserted">+</span><span class="token line">    for (i = 0; i &lt; NINDIRECT; ++i) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      if (a[i]) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">        bp2 = bread(ip->dev, a[i]);
+</span><span class="token prefix inserted">+</span><span class="token line">        a2 = (uint *)bp2->data;
+</span><span class="token prefix inserted">+</span><span class="token line">        for (j = 0; j &lt; NINDIRECT; ++j) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">          if (a2[j]) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">            bfree(ip->dev, a2[j]);
+</span><span class="token prefix inserted">+</span><span class="token line">          &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">        &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">        brelse(bp2);
+</span><span class="token prefix inserted">+</span><span class="token line">        bfree(ip->dev, a[i]);
+</span><span class="token prefix inserted">+</span><span class="token line">      &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">    brelse(bp);
+</span><span class="token prefix inserted">+</span><span class="token line">    bfree(ip->dev, ip->addrs[NDIRECT + 1]);
+</span><span class="token prefix inserted">+</span><span class="token line">    ip->addrs[NDIRECT + 1] = 0;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">  ip->size = 0;
+</span><span class="token prefix unchanged"> </span><span class="token line">  iupdate(ip);
+</span><span class="token prefix unchanged"> </span><span class="token line">&#125;
+</span></span>diff --git a/kernel/fs.h b/kernel/fs.h
+index 139dcc9..cd5de8a 100644
+<span class="token coord">--- a/kernel/fs.h</span>
+<span class="token coord">+++ b/kernel/fs.h</span>
+@@ -24,9 +24,10 @@ struct superblock &#123;
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">#define FSMAGIC 0x10203040
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span></span><span class="token deleted-sign deleted"><span class="token prefix deleted">-</span><span class="token line">#define NDIRECT 12
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#define NDIRECT 11
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">#define NINDIRECT (BSIZE / sizeof(uint))
+</span></span><span class="token deleted-sign deleted"><span class="token prefix deleted">-</span><span class="token line">#define MAXFILE (NDIRECT + NINDIRECT)
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#define NINDIRECT2 (NINDIRECT * NINDIRECT)
+</span><span class="token prefix inserted">+</span><span class="token line">#define MAXFILE (NDIRECT + NINDIRECT + NINDIRECT2)
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">// On-disk inode structure
+</span><span class="token prefix unchanged"> </span><span class="token line">struct dinode &#123;
+</span></span>@@ -35,7 +36,7 @@ struct dinode &#123;
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">  short minor;          // Minor device number (T_DEVICE only)
+</span><span class="token prefix unchanged"> </span><span class="token line">  short nlink;          // Number of links to inode in file system
+</span><span class="token prefix unchanged"> </span><span class="token line">  uint size;            // Size of file (bytes)
+</span></span><span class="token deleted-sign deleted"><span class="token prefix deleted">-</span><span class="token line">  uint addrs[NDIRECT+1];   // Data block addresses
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">  uint addrs[NDIRECT+2];   // Data block addresses
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">&#125;;
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">// Inodes per block.</span></span></code></pre>
+
+<h1 id="Symbolic-links"><a href="#Symbolic-links" class="headerlink" title="Symbolic links"></a>Symbolic links</h1><h2 id="思路-1"><a href="#思路-1" class="headerlink" title="思路"></a>思路</h2><p>本实验要求为 xv6 实现符号链接（软链接）机制，符号链接本质上也是一个文件，只不过它的数据内容为该链接指向的文件路径，这其实与 Windows 系统的快捷方式十分类似。实现方案如下：</p>
+<p>首先依照 Lab System call 中的方法，添加系统调用 <code>symlink</code>：添加 <code>symlink()</code> 声明，添加系统调用号，添加系统调用 entry，添加 <code>sys_symlink()</code> 声明。</p>
+<p>在理解了符号链接的本质后，就可以着手实现 <code>sys_symlink</code> 了。首先明确一下 <code>symlink</code> 的作用，它包含两个参数：target 和 path，作用是创建一个目录为 path 的符号链接，该符号链接指向目录为 target 的文件。实现思路应该比较清晰：使用 <code>create()</code> 创建一个文件类型为符号链接（需要自行定义）的文件，再使用 <code>writei()</code> 将字符串 path 写入该文件中。</p>
+<pre class="language-c" data-language="c"><code class="language-c">uint64 <span class="token function">sys_symlink</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> n1<span class="token punctuation">,</span> n2<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> target<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">,</span> path<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">inode</span> <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+
+    <span class="token comment">// get arguments of symlink</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>n1 <span class="token operator">=</span> <span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> target<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token punctuation">(</span>n2 <span class="token operator">=</span> <span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> path<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// create symbol link in the path</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">create</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> T_SYMLINK<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token comment">// write target to file that ip points to</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">writei</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>target<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> n1<span class="token punctuation">)</span> <span class="token operator">&lt;</span> n1<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>实现了符号链接的创建之后，还需要修改 <code>sys_open()</code>，实现对符号链接的特殊处理：当该文件是一个符号链接并且需要以跟随（follow）的方式打开时，就不断向下递归，将当前的 inode 指针指向符号链接指向文件的 inode，直到 inode 指针对应的文件类型不是符号链接，此时该 inode 指针指向的文件才是本次 <code>sys_open()</code> 系统调用实际需要打开的文件。</p>
+<p>这里要用到两个关键函数 <code>readi()</code> 和 <code>namei()</code>。其中 <code>readi()</code> 能够根据 inode 指针，从该 inode 指针对应的文件中读取数据；而 <code>namei()</code> 能够根据指定的路径，返回该路径对应文件的 inode 指针。“跟随”的基本流程就是先使用读取当前 inode 中的数据，即目标文件路径 path，再将当前 inode 指针指向 path 目录对应的文件，以此往复。</p>
+<p>最后还有一个小细节，就是当多个符号链接形成一个环时，这样的“跟随”过程就可能会导致死循环，因此必须加以限制，这里为了实现的方便，只是设定了一个最大递归深度，当递归深度超过该设定最大值时，文件打开就会失败。</p>
+<pre class="language-c" data-language="c"><code class="language-c"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_NOFOLLOW<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> depth <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>     <span class="token comment">// max recursive depth</span>
+    <span class="token keyword">struct</span> <span class="token class-name">inode</span> <span class="token operator">*</span>next<span class="token punctuation">;</span> <span class="token comment">// next inode</span>
+
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>depth <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>type <span class="token operator">==</span> T_SYMLINK<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// read data from file that ip points to to path</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>path<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        <span class="token comment">// get inode of file in the path</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>next <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ip <span class="token operator">=</span> next<span class="token punctuation">;</span>
+        <span class="token operator">--</span>depth<span class="token punctuation">;</span>
+        <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>depth <span class="token operator">&lt;=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<h2 id="代码-1"><a href="#代码-1" class="headerlink" title="代码"></a>代码</h2><pre class="language-diff" data-language="diff"><code class="language-diff">diff --git a/Makefile b/Makefile
+index 7a7e380..37a202c 100644
+<span class="token coord">--- a/Makefile</span>
+<span class="token coord">+++ b/Makefile</span>
+@@ -188,6 +188,7 @@ UPROGS=\
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">	$U/_grind\
+</span><span class="token prefix unchanged"> </span><span class="token line">	$U/_wc\
+</span><span class="token prefix unchanged"> </span><span class="token line">	$U/_zombie\
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">	$U/_symlinktest\
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span></span>diff --git a/kernel/fcntl.h b/kernel/fcntl.h
+index 44861b9..b42df18 100644
+<span class="token coord">--- a/kernel/fcntl.h</span>
+<span class="token coord">+++ b/kernel/fcntl.h</span>
+<span class="token coord">@@ -3,3 +3,4 @@</span>
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">#define O_RDWR    0x002
+</span><span class="token prefix unchanged"> </span><span class="token line">#define O_CREATE  0x200
+</span><span class="token prefix unchanged"> </span><span class="token line">#define O_TRUNC   0x400
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#define O_NOFOLLOW 0x800
+</span></span>\ No newline at end of file
+diff --git a/kernel/stat.h b/kernel/stat.h
+index 19543af..46ba47f 100644
+<span class="token coord">--- a/kernel/stat.h</span>
+<span class="token coord">+++ b/kernel/stat.h</span>
+<span class="token coord">@@ -1,6 +1,7 @@</span>
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">#define T_DIR     1   // Directory
+</span><span class="token prefix unchanged"> </span><span class="token line">#define T_FILE    2   // File
+</span><span class="token prefix unchanged"> </span><span class="token line">#define T_DEVICE  3   // Device
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#define T_SYMLINK 4   // Symbol link
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">struct stat &#123;
+</span><span class="token prefix unchanged"> </span><span class="token line">  int dev;     // File system's disk device
+</span></span>diff --git a/kernel/syscall.c b/kernel/syscall.c
+index c1b3670..1697b62 100644
+<span class="token coord">--- a/kernel/syscall.c</span>
+<span class="token coord">+++ b/kernel/syscall.c</span>
+@@ -104,6 +104,7 @@ extern uint64 sys_unlink(void);
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">extern uint64 sys_wait(void);
+</span><span class="token prefix unchanged"> </span><span class="token line">extern uint64 sys_write(void);
+</span><span class="token prefix unchanged"> </span><span class="token line">extern uint64 sys_uptime(void);
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">extern uint64 sys_symlink(void);
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">static uint64 (*syscalls[])(void) = &#123;
+</span><span class="token prefix unchanged"> </span><span class="token line">[SYS_fork]    sys_fork,
+</span></span>@@ -127,6 +128,7 @@ static uint64 (*syscalls[])(void) = &#123;
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">[SYS_link]    sys_link,
+</span><span class="token prefix unchanged"> </span><span class="token line">[SYS_mkdir]   sys_mkdir,
+</span><span class="token prefix unchanged"> </span><span class="token line">[SYS_close]   sys_close,
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">[SYS_symlink] sys_symlink,
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">&#125;;
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">void
+</span></span>diff --git a/kernel/syscall.h b/kernel/syscall.h
+index bc5f356..0fbf6ed 100644
+<span class="token coord">--- a/kernel/syscall.h</span>
+<span class="token coord">+++ b/kernel/syscall.h</span>
+<span class="token coord">@@ -20,3 +20,4 @@</span>
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">#define SYS_link   19
+</span><span class="token prefix unchanged"> </span><span class="token line">#define SYS_mkdir  20
+</span><span class="token prefix unchanged"> </span><span class="token line">#define SYS_close  21
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#define SYS_symlink 22
+</span></span>\ No newline at end of file
+diff --git a/kernel/sysfile.c b/kernel/sysfile.c
+index 5dc453b..ae342c8 100644
+<span class="token coord">--- a/kernel/sysfile.c</span>
+<span class="token coord">+++ b/kernel/sysfile.c</span>
+<span class="token coord">@@ -15,6 +15,7 @@</span>
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">#include "sleeplock.h"
+</span><span class="token prefix unchanged"> </span><span class="token line">#include "file.h"
+</span><span class="token prefix unchanged"> </span><span class="token line">#include "fcntl.h"
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">#include "buf.h"
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">// Fetch the nth word-sized system call argument as a file descriptor
+</span><span class="token prefix unchanged"> </span><span class="token line">// and return both the descriptor and the corresponding struct file.
+</span></span>@@ -316,6 +317,35 @@ sys_open(void)
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">    &#125;
+</span><span class="token prefix unchanged"> </span><span class="token line">  &#125;
+</span><span class="token prefix unchanged"> </span><span class="token line">
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">  if (!(omode &amp; O_NOFOLLOW)) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    int depth = 10;
+</span><span class="token prefix inserted">+</span><span class="token line">    struct inode *next;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">    while (depth > 0 &amp;&amp; ip->type == T_SYMLINK) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      if (readi(ip, 0, (uint64)path, 0, MAXPATH) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">        iunlockput(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">        end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">        return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">      &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">      if ((next = namei(path)) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">        iunlockput(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">        end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">        return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">      &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">      iunlockput(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">      ip = next;
+</span><span class="token prefix inserted">+</span><span class="token line">      --depth;
+</span><span class="token prefix inserted">+</span><span class="token line">      ilock(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">    if (depth &lt;= 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">      iunlockput(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">      end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">      return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">    &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">  if(ip->type == T_DEVICE &amp;&amp; (ip->major &lt; 0 || ip->major >= NDEV))&#123;
+</span><span class="token prefix unchanged"> </span><span class="token line">    iunlockput(ip);
+</span><span class="token prefix unchanged"> </span><span class="token line">    end_op();
+</span></span>@@ -484,3 +514,28 @@ sys_pipe(void)
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">  &#125;
+</span><span class="token prefix unchanged"> </span><span class="token line">  return 0;
+</span><span class="token prefix unchanged"> </span><span class="token line">&#125;
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">uint64 sys_symlink(void) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">  int n1, n2;
+</span><span class="token prefix inserted">+</span><span class="token line">  char target[MAXPATH], path[MAXPATH];
+</span><span class="token prefix inserted">+</span><span class="token line">  struct inode *ip;
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">  if ((n1 = argstr(0, target, MAXPATH)) &lt; 0 || (n2 = argstr(1, path, MAXPATH)) &lt; 1) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">  
+</span><span class="token prefix inserted">+</span><span class="token line">  // create symbol link in the path
+</span><span class="token prefix inserted">+</span><span class="token line">  begin_op();
+</span><span class="token prefix inserted">+</span><span class="token line">  if ((ip = create(path, T_SYMLINK, 0, 0)) == 0) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">    return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">  if (writei(ip, 0, (uint64)target, 0, n1) &lt; n1) &#123;
+</span><span class="token prefix inserted">+</span><span class="token line">    end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">    return -1;
+</span><span class="token prefix inserted">+</span><span class="token line">  &#125;
+</span><span class="token prefix inserted">+</span><span class="token line">  iunlockput(ip);
+</span><span class="token prefix inserted">+</span><span class="token line">  end_op();
+</span><span class="token prefix inserted">+</span><span class="token line">
+</span><span class="token prefix inserted">+</span><span class="token line">  return 0;
+</span><span class="token prefix inserted">+</span><span class="token line">&#125;
+</span></span>\ No newline at end of file
+diff --git a/user/user.h b/user/user.h
+index b71ecda..883ef48 100644
+<span class="token coord">--- a/user/user.h</span>
+<span class="token coord">+++ b/user/user.h</span>
+@@ -23,6 +23,7 @@ int getpid(void);
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">char* sbrk(int);
+</span><span class="token prefix unchanged"> </span><span class="token line">int sleep(int);
+</span><span class="token prefix unchanged"> </span><span class="token line">int uptime(void);
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">int symlink(char *, char *);
+</span></span><span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">
+</span><span class="token prefix unchanged"> </span><span class="token line">// ulib.c
+</span><span class="token prefix unchanged"> </span><span class="token line">int stat(const char*, struct stat*);
+</span></span>diff --git a/user/usys.pl b/user/usys.pl
+index 01e426e..65a8d6b 100755
+<span class="token coord">--- a/user/usys.pl</span>
+<span class="token coord">+++ b/user/usys.pl</span>
+@@ -36,3 +36,4 @@ entry("getpid");
+<span class="token unchanged"><span class="token prefix unchanged"> </span><span class="token line">entry("sbrk");
+</span><span class="token prefix unchanged"> </span><span class="token line">entry("sleep");
+</span><span class="token prefix unchanged"> </span><span class="token line">entry("uptime");
+</span></span><span class="token inserted-sign inserted"><span class="token prefix inserted">+</span><span class="token line">entry("symlink");
+</span></span>\ No newline at end of file</code></pre>
+
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>经验</tag>
+        <tag>操作系统</tag>
+        <tag>xv6</tag>
+      </tags>
+  </entry>
 </search>
